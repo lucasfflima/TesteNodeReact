@@ -1,24 +1,12 @@
-const https = require('https');
-const fs = require('fs');
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-const options = {
-    key: fs.readFileSync(__dirname + '/localhost-key.pem'),
-    cert: fs.readFileSync(__dirname + '/localhost.pem')
-};
+// require('dotenv').config();
 
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 const REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI;
 
 const login = (req, res) => {
-  const scope = 'user-read-private user-read-email user-top-read';
+  const scope = 'user-read-private user-read-email user-top-read playlist-read-private playlist-modify-public';
   const state = Math.random().toString(36).substring(2, 15);
   
   const authUrl = 'https://accounts.spotify.com/authorize?' +
@@ -57,16 +45,19 @@ const callback = async (req, res) => {
     const data = await response.json();
     
     if (response.ok) {
-      res.json({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-        expires_in: data.expires_in
-      });
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      res.redirect(`${frontendUrl}/callback?` + 
+        `access_token=${encodeURIComponent(data.access_token)}` + 
+        `&refresh_token=${encodeURIComponent(data.refresh_token)}` + 
+        `&expires_in=${data.expires_in}`);
     } else {
-      res.json({ error: 'Invalid token' });
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      res.redirect(`${frontendUrl}/callback?error=invalid_token`);
     }
   } catch (error) {
-    res.json({ error: error.message });
+    console.error('Error during token exchange:', error);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    res.redirect(`${frontendUrl}/callback?error=${encodeURIComponent(error.message)}`);
   }
 };
 
@@ -93,10 +84,8 @@ const refreshToken = async (req, res) => {
   }
 };
 
-app.get('/login', login);
-app.get('/callback', callback);
-app.post('/refresh_token', refreshToken);
-
-https.createServer(options, app).listen(3001, () => {
-  console.log('Server is running on https://localhost:3001');
-});
+module.exports = {
+  login,
+  callback,
+  refreshToken
+};
