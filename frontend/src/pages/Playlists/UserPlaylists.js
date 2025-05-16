@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getUserPlaylists } from '../../services/spotifyService';
 import CreatePlaylist from './CreatePlaylist';
-// import './UserPlaylists.css';
+import '../../styles/UserPlaylist.css';
 
 function UserPlaylists() {
   const [playlists, setPlaylists] = useState([]);
@@ -38,12 +38,15 @@ function UserPlaylists() {
   return (
     <div className="playlists-container">
       <div className="playlists-header">
-        <h1>Your Playlists</h1>
+        <div className="header-text">
+          <h1>Minhas Playlists</h1>
+          <p>Sua coleção pessoal de playlists.</p>
+        </div>
         <button 
           className="create-playlist-btn"
           onClick={() => setShowCreateForm(true)}
         >
-          Create Playlist
+          Criar Playlist
         </button>
       </div>
       

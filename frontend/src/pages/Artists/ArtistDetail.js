@@ -1,139 +1,196 @@
-// Componente que exibe detalhes de um artista e seus álbuns
-// Uso o useParams para pegar o ID do artista da URL
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-// import './ArtistDetail.css';
+import { useParams, useNavigate } from 'react-router-dom';
+import { getValidToken } from '../../utils/auth';
+import '../../styles/ArtistDetail.css';
 
 function ArtistDetail() {
-  const { artistId } = useParams(); // Pego o ID do artista da URL
-  // Estados para armazenar os dados que vêm da API
+  // Chame todos os hooks React no início da função
+  const params = useParams();
+  const navigate = useNavigate();
+  
+  const artistId = params.id || params.artistId;
+  
   const [artist, setArtist] = useState(null);
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Função para buscar dados do artista e seus álbuns
+    
+    // Se o artistId estiver indefinido, redirecionar
+    if (!artistId) {
+      setError("ID do artista não encontrado na URL");
+      setTimeout(() => navigate('/top-artists'), 2000);
+      setLoading(false);
+      return;
+    }
+
+    // Validar formato do ID do Spotify (base62)
+    const validSpotifyId = /^[0-9A-Za-z]{22}$/;
+    if (!validSpotifyId.test(artistId)) {
+      setError(`ID do artista inválido: ${artistId}`);
+      setLoading(false);
+      return;
+    }
+
     const fetchArtistAndAlbums = async () => {
       try {
-        // Pego o token de acesso do localStorage
-        const token = localStorage.getItem('access_token');
+        // Obtenha um token válido
+        const token = await getValidToken().catch(err => {
+          console.error("Erro ao obter token válido:", err);
+          navigate('/login');
+          return null;
+        });
         
-        //busco os detalhes do artista
+        if (!token) {
+          setError("Token não encontrado. Redirecionando para login...");
+          setTimeout(() => navigate('/login'), 2000);
+          return;
+        }
+        
+        // Buscar detalhes do artista
         const artistResponse = await fetch(
           `https://api.spotify.com/v1/artists/${artistId}`,
           {
             headers: { 'Authorization': `Bearer ${token}` }
           }
         );
+        
+        if (!artistResponse.ok) {
+          const errorData = await artistResponse.json();
+          console.error("Erro da API:", errorData);
+          
+          if (artistResponse.status === 401) {
+            throw new Error("Sessão expirada. Faça login novamente.");
+          } else if (artistResponse.status === 400) {
+            throw new Error(`ID de artista inválido: ${artistId}`);
+          }
+          throw new Error(`Erro ao buscar artista: ${artistResponse.status}`);
+        }
+        
         const artistData = await artistResponse.json();
         setArtist(artistData);
         
-        //busco os álbuns do artista
-        // Limitei a 50 álbuns para não sobrecarregar
+        // Buscar álbuns do artista
         const albumsResponse = await fetch(
           `https://api.spotify.com/v1/artists/${artistId}/albums?include_groups=album&limit=50`,
           {
             headers: { 'Authorization': `Bearer ${token}` }
           }
         );
+        
+        if (!albumsResponse.ok) {
+          const errorAlbums = await albumsResponse.json();
+          console.error("Erro ao buscar álbums:", errorAlbums);
+          
+          if (albumsResponse.status === 401) {
+            throw new Error("Sessão expirada. Faça login novamente.");
+          } else if (albumsResponse.status === 400) {
+            throw new Error(`ID de artista inválido para busca de álbums: ${artistId}`);
+          }
+          throw new Error(`Erro ao buscar álbuns: ${albumsResponse.status}`);
+        }
+        
         const albumsData = await albumsResponse.json();
         
-        // Esse trecho remove os álbuns com nomes duplicados
-        // Spotify costuma retornar várias versões do mesmo álbum (deluxe, remasterizado, etc)
+        // Remover duplicados
         const uniqueAlbums = [];
         const albumNames = new Set();
         
-        albumsData.items.forEach(album => {
-          if (!albumNames.has(album.name.toLowerCase())) {
-            albumNames.add(album.name.toLowerCase());
-            uniqueAlbums.push(album);
-          }
-        });
+        if (albumsData.items && Array.isArray(albumsData.items)) {
+          albumsData.items.forEach(album => {
+            if (!albumNames.has(album.name.toLowerCase())) {
+              albumNames.add(album.name.toLowerCase());
+              uniqueAlbums.push(album);
+            }
+          });
+        }
         
         setAlbums(uniqueAlbums);
       } catch (error) {
-        console.error('Error fetching artist data:', error);
+        console.error('Erro ao buscar dados:', error);
+        
+        if (error.message.includes("expirada") || error.message.includes("login")) {
+          localStorage.removeItem('access_token');
+          setError("Sessão expirada. Redirecionando para login...");
+          setTimeout(() => navigate('/login'), 2000);
+        } else if (error.message.includes("inválido")) {
+          setError(error.message);
+        } else {
+          setError("Ocorreu um erro ao carregar os dados. Tente novamente mais tarde.");
+        }
       } finally {
-        // Termino o loading independente de sucesso ou erro
         setLoading(false);
       }
     };
 
     fetchArtistAndAlbums();
-  }, [artistId]); // Executa quando o ID do artista mudar
+  }, [artistId, navigate]);
 
-  // Mostro um spinner enquanto carrega os dados
   if (loading) {
-    return <div className="loading-spinner">Carregando informações do artista...</div>;
+    return <div className="loading-spinner">Carregando...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <h2>Não foi possível carregar os dados do artista</h2>
+        <p className="error-message">{error}</p>
+        <button 
+          className="back-button" 
+          onClick={() => navigate('/top-artists')}
+        >
+          Voltar para artistas
+        </button>
+      </div>
+    );
   }
 
   return (
     <div className="artist-detail-container">
-      {/* Cabeçalho com detalhes do artista */}
+      {/* Cabeçalho com nome do artista */}
       {artist && (
-        <>
-          {/* Uso a imagem do artista como background com overlay */}
-          <div className="artist-header" 
-               style={{backgroundImage: `url(${artist.images?.[0]?.url})`}}>
-            <div className="artist-header-overlay">
-              <div className="artist-header-content">
-                <h1>{artist.name}</h1>
-                {/* Estatísticas do artista: seguidores e popularidade */}
-                <div className="artist-stats">
-                  <div className="stat">
-                    <span className="stat-value">{artist.followers?.total.toLocaleString()}</span>
-                    <span className="stat-label">seguidores</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-value">{artist.popularity}%</span>
-                    <span className="stat-label">popularidade</span>
-                  </div>
-                </div>
-                {/* Tags com os gêneros musicais do artista */}
-                <div className="artist-genres">
-                  {artist.genres.map(genre => (
-                    <span key={genre} className="genre-tag">{genre}</span>
-                  ))}
-                </div>
-                {/* Link para o perfil do Spotify */}
-                <a 
-                  href={artist.external_urls?.spotify} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="spotify-link"
-                >
-                  Abrir no Spotify
-                </a>
-              </div>
+        <div className="artist-header" 
+             style={{backgroundImage: artist.images && artist.images.length > 0 ? 
+               `url(${artist.images[0].url})` : 'none'}}>
+          <div className="artist-header-overlay">
+            <div className="artist-header-content">
+              <h1>{artist.name}</h1>
             </div>
           </div>
-        </>
+        </div>
       )}
       
-      {/* Grid de álbuns do artista */}
+      {/* Grid de álbuns simplificado */}
       <div className="albums-grid">
-        {albums.map(album => (
-          <a 
-            href={album.external_urls.spotify} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="album-card"
-            key={album.id}
-          >
-            {/* Imagem do álbum ou placeholder caso não tenha */}
-            {album.images && album.images.length > 0 ? (
-              <img src={album.images[0].url} alt={album.name} className="album-image" />
-            ) : (
-              <div className="album-image-placeholder"></div>
-            )}
-            {/* Informações do álbum: nome, ano e número de faixas */}
-            <div className="album-info">
-              <h3 className="album-name">{album.name}</h3>
-              <p className="album-year">{new Date(album.release_date).getFullYear()}</p>
-              <p className="album-tracks">{album.total_tracks} tracks</p>
+        {albums && albums.length > 0 ? (
+          albums.map(album => (
+            <div className="album-card" key={album.id}>
+              {/* Imagem do álbum */}
+              {album.images && album.images.length > 0 ? (
+                <img 
+                  src={album.images[0].url} 
+                  alt={`${album.name} cover`} 
+                  className="album-image" 
+                />
+              ) : (
+                <div className="album-image-placeholder">Sem imagem</div>
+              )}
+              
+              <div className="album-info">
+                {/* Nome do álbum */}
+                <h3 className="album-name">{album.name || "Título desconhecido"}</h3>
+                
+                {/* Data de lançamento */}
+                <p className="album-year">
+                  {album.release_date ? new Date(album.release_date).getFullYear() : "Ano desconhecido"}
+                </p>
+              </div>
             </div>
-          </a>
-        ))}
+          ))
+        ) : (
+          <p className="no-albums">Nenhum álbum encontrado</p>
+        )}
       </div>
     </div>
   );

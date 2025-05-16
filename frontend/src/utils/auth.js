@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 export const handleCallbackParams = () => {
   const hashParams = new URLSearchParams(window.location.search);
   const accessToken = hashParams.get('access_token');
@@ -11,7 +13,7 @@ export const handleCallbackParams = () => {
     
     // Set expiration time
     const expiryTime = Date.now() + (parseInt(expiresIn) * 1000);
-    localStorage.setItem('token_expiry', expiryTime);
+    localStorage.setItem('expires_at', expiryTime);
     
     return true;
   }
@@ -19,52 +21,64 @@ export const handleCallbackParams = () => {
   return false;
 };
 
-export const isAuthenticated = () => {
-  const token = localStorage.getItem('access_token');
-  const expiry = localStorage.getItem('token_expiry');
+// Verifica se o token expirou
+export const isTokenExpired = () => {
+  const expiresAt = localStorage.getItem('expires_at');
+  if (!expiresAt) return true;
   
-  if (!token || !expiry) {
-    return false;
-  }
-  
-  // Check if token is expired
-  if (Date.now() > parseInt(expiry)) {
-    // Token expired, attempt to refresh
-    return refreshAccessToken();
-  }
-  
-  return true;
+  // Adiciona uma margem de segurança de 5 minutos
+  return Date.now() > parseInt(expiresAt) - 300000;
 };
 
+// Renova o token de acesso usando o refresh token
 export const refreshAccessToken = async () => {
-  const refreshToken = localStorage.getItem('refresh_token');
-  
-  if (!refreshToken) {
-    return false;
-  }
-  
   try {
-    const response = await fetch('http://localhost:3001/api/auth/refresh-token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ refresh_token: refreshToken })
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+      throw new Error('Refresh token não encontrado');
+    }
+
+    // Chamada para o endpoint do backend que lida com a renovação do token
+    const response = await axios.post('/api/auth/refresh-token', {
+      refresh_token: refreshToken
     });
-    
-    const data = await response.json();
-    
-    if (data.access_token) {
-      localStorage.setItem('access_token', data.access_token);
+
+    if (response.data && response.data.access_token) {
+      // Atualiza os tokens no localStorage
+      localStorage.setItem('access_token', response.data.access_token);
+      if (response.data.refresh_token) {
+        localStorage.setItem('refresh_token', response.data.refresh_token);
+      }
+      localStorage.setItem('expires_at', Date.now() + (response.data.expires_in * 1000));
       
-      const expiryTime = Date.now() + (data.expires_in * 1000);
-      localStorage.setItem('token_expiry', expiryTime);
-      
-      return true;
+      return response.data.access_token;
+    } else {
+      throw new Error('Resposta inválida ao renovar token');
     }
   } catch (error) {
-    console.error('Error refreshing token:', error);
+    console.error('Erro ao renovar token:', error);
+    // Em caso de erro na renovação, redireciona para o login
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('expires_at');
+    window.location.href = '/login';
+    throw error;
   }
-  
-  return false;
+};
+
+// Função que obtém um token válido, renovando se necessário
+export const getValidToken = async () => {
+  if (isTokenExpired()) {
+    return await refreshAccessToken();
+  }
+  return localStorage.getItem('access_token');
+};
+
+export const isAuthenticated = async () => {
+  try {
+    const token = await getValidToken();
+    return !!token;
+  } catch (error) {
+    return false;
+  }
 };

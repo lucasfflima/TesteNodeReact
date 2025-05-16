@@ -1,0 +1,49 @@
+:root {
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 64px;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  background-color: var(--spotify-dark-gray); /* Cor de fundo para toda a aplicação */
+  font-family: 'Circular', Helvetica, Arial, sans-serif;
+  color: var(--spotify-white);
+}
+
+#root {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.layout {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex-grow: 1;
+  overflow-x: hidden;
+  background-color: var(--spotify-dark-gray);
+  margin-left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: var(--sidebar-width-collapsed);
+    width: calc(100% - var(--sidebar-width-collapsed));
+  }
+}

@@ -1,34 +1,77 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHome, faMusic, faDownload, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faCirclePlay } from '@fortawesome/free-regular-svg-icons';
+import '../../styles/Sidebar.css';
 
 function Sidebar() {
   const location = useLocation();
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallButton, setShowInstallButton] = useState(false);
+  
+  useEffect(() => {
+    // Listen for the beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent Chrome from automatically showing the prompt
+      e.preventDefault();
+      // Save the event so it can be triggered later
+      setDeferredPrompt(e);
+      // Show the install button
+      setShowInstallButton(true);
+    });
+    
+    // Check if app is already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallButton(false);
+    }
+  }, []);
+  
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    
+    // Show the installation prompt
+    deferredPrompt.prompt();
+    
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    // We no longer need the prompt
+    setDeferredPrompt(null);
+    
+    // Hide the install button if the app was installed
+    if (outcome === 'accepted') {
+      setShowInstallButton(false);
+    }
+  };
   
   return (
     <div className="sidebar">
       <div className="logo">
-        <svg viewBox="0 0 1134 340" className="spotify-logo">
-          <path fill="white" d="M8 171c0 92 76 168 168 168s168-76 168-168S268 4 176 4 8 79 8 171zm230 78c-39-24-89-30-147-17-14 2-16-18-4-20 64-15 118-8 162 19 11 7 0 24-11 18zm17-45c-45-28-114-36-167-20-17 5-23-21-7-25 61-18 136-9 188 23 14 9 0 31-14 22zM80 133c-17 6-28-23-9-30 59-18 159-15 221 22 17 9 1 37-17 27-54-32-144-35-195-19zm379 91c-17 0-33-6-47-20-1 0-1 1-1 1l-16 19c-1 1-1 2 0 3 18 16 40 24 64 24 34 0 55-19 55-47 0-24-15-37-50-46-29-7-34-12-34-22s10-16 23-16 25 5 39 15c0 0 1 1 2 1s1-1 1-1l14-20c1-1 1-1 0-2-16-13-35-20-56-20-31 0-53 19-53 46 0 29 20 38 52 46 28 6 32 12 32 22 0 11-10 17-25 17z"/>
-        </svg>
+        <img 
+          src="https://storage.googleapis.com/pr-newsroom-wp/1/2018/11/Spotify_Logo_RGB_White.png" 
+          alt="Spotify" 
+          className="spotify-logo" 
+        />
       </div>
       <nav className="nav">
         <ul>
           <li>
             <Link 
-              to="/dashboard" 
-              className={location.pathname === '/dashboard' ? 'active' : ''}
+              to="/" 
+              className={location.pathname === '/' ? 'active' : ''}
             >
-              <i className="fas fa-home"></i>
+              <FontAwesomeIcon icon={faHome} />
               <span>Home</span>
             </Link>
           </li>
           <li>
             <Link 
-              to="/artists" 
-              className={location.pathname === '/artists' ? 'active' : ''}
+              to="/top-artists" 
+              className={location.pathname === '/top-artists' ? 'active' : ''}
             >
-              <i className="fas fa-user"></i>
-              <span>Top Artists</span>
+              <FontAwesomeIcon icon={faCirclePlay} />
+              <span>Artistas</span>
             </Link>
           </li>
           <li>
@@ -36,22 +79,31 @@ function Sidebar() {
               to="/playlists" 
               className={location.pathname === '/playlists' ? 'active' : ''}
             >
-              <i className="fas fa-music"></i>
+              <FontAwesomeIcon icon={faMusic} />
               <span>Playlists</span>
+            </Link>
+          </li>
+          <li>
+            <Link 
+              to="/profile" 
+              className={location.pathname === '/profile' ? 'active' : ''}
+            >
+              <FontAwesomeIcon icon={faUser} />
+              <span>Perfil</span>
             </Link>
           </li>
         </ul>
       </nav>
-      <div className="sidebar-footer">
-        <a 
-          href="https://github.com/lucasfflima" 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="github-link"
-        >
-          <i className="fab fa-github"></i> GitHub
-        </a>
-      </div>
+      {showInstallButton && (
+        <div className="sidebar-footer">
+          <button 
+            onClick={handleInstallClick}
+            className="install-spotify-button"
+          >
+            <FontAwesomeIcon icon={faDownload} /> Instalar App
+          </button>
+        </div>
+      )}
     </div>
   );
 }

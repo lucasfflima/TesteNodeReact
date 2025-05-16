@@ -1,53 +1,72 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { isAuthenticated } from './utils/auth';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './components/Layout/Layout';
 import Login from './pages/Auth/Login';
 import Callback from './pages/Auth/Callback';
-import Sidebar from './components/Layout/Sidebar';
 import Dashboard from './pages/Dashboard/Dashboard';
+import Home from './pages/Home/Home';
+import UserPlaylist from './pages/Playlists/UserPlaylists';
 import TopArtists from './pages/Artists/TopArtists';
 import ArtistDetail from './pages/Artists/ArtistDetail';
-import UserPlaylists from './pages/Playlists/UserPlaylists';
-// import './App.css';
+// Importe outras páginas conforme necessário
 
-// Componente de rota privada
-function PrivateRoute({ children }) {
-  return isAuthenticated() ? children : <Navigate to="/" replace />;
-}
+// Função auxiliar para verificar se o usuário está autenticado
+const isAuthenticated = () => {
+  return localStorage.getItem('access_token') !== null;
+};
 
-function Layout() {
-  return (
-    <div className="app-container">
-      <Sidebar />
-      <main className="content">
-        <Outlet />
-      </main>
-    </div>
-  );
-}
+// Componente para rotas protegidas
+const ProtectedRoute = ({ children }) => {
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" />;
+  }
+  return <Layout>{children}</Layout>;
+};
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Rotas públicas */}
-        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/callback" element={<Callback />} />
-
-        {/* Rotas protegidas dentro do Layout */}
+        
         <Route path="/" element={
-          <PrivateRoute>
-            <Layout />
-          </PrivateRoute>
-        }>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/artists" element={<TopArtists />} />
-          <Route path="/artist/:artistId" element={<ArtistDetail />} />
-          <Route path="/playlists" element={<UserPlaylists />} />
-          
-          {/* Redirecionar para dashboard como padrão para usuários autenticados */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Route>
+          <ProtectedRoute>
+            <Home />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/playlists" element={
+          <ProtectedRoute>
+            <UserPlaylist />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/top-artists" element={
+          <ProtectedRoute>
+            <TopArtists />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/artist/:id" element={
+          <ProtectedRoute>
+            <ArtistDetail />
+          </ProtectedRoute>
+        } />
+        
+        {/* Adicione outras rotas protegidas conforme necessário */}
       </Routes>
     </Router>
   );

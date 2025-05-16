@@ -1,70 +1,178 @@
-# Getting Started with Create React App
+# Aplicação de Integração com Spotify
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Uma aplicação que integra com as APIs do Spotify para exibir perfis de usuários, playlists, principais artistas, e permitir a criação de playlists.
 
-## Available Scripts
+## Arquitetura
 
-In the project directory, you can run:
+Este projeto segue uma arquitetura cliente-servidor:
+
+- **Frontend**: Aplicação React com React Router para navegação
+- **Backend**: Servidor Express.js atuando como proxy de autenticação para a API do Spotify
+- **Autenticação**: Fluxo OAuth 2.0 com a API do Spotify
+
+### Principais Tecnologias Utilizadas
+
+#### Frontend
+- React 19
+- React Router v7
+- Axios para requisições API
+- CSS para estilização
+
+#### Backend
+- Express.js
+- Node.js
+- Jest para testes
+
+## Instruções de Instalação
+
+### Pré-requisitos
+- Node.js (v18 ou posterior recomendado)
+- npm ou yarn
+- Conta de desenvolvedor Spotify com aplicativo registrado
+
+### Configuração
+
+1. **Clone o repositório**
+   ```bash
+   git clone <url-do-repositorio>
+   cd teste-node-react
+   ```
+
+2. **Configuração do Backend**
+   ```bash
+   cd backend
+   npm install
+   ```
+
+   Crie um arquivo `.env` no diretório backend com as seguintes variáveis:
+   ```
+   SPOTIFY_CLIENT_ID=seu_spotify_client_id
+   SPOTIFY_CLIENT_SECRET=seu_spotify_client_secret
+   SPOTIFY_REDIRECT_URI=seu_uri_de_redirecionamento
+   PORT=3001
+   FRONTEND_URL=http://localhost:3000
+   ```
+
+3. **Configuração do Frontend**
+   ```bash
+   cd ../frontend
+   npm install
+   ```
+
+### Executando a Aplicação
+
+1. **Inicie o Servidor Backend**
+   ```bash
+   cd backend
+   npm start
+   ```
+   O servidor será executado na porta 3001 por padrão.
+
+2. **Inicie o Servidor de Desenvolvimento Frontend**
+   ```bash
+   cd frontend
+   npm start
+   ```
+   A aplicação React será executada na porta 3000 por padrão.
+
+## Usando ngrok para HTTPS
+
+A API do Spotify requer HTTPS para redirecionamentos OAuth em produção. Para desenvolvimento, você pode usar ngrok para criar um túnel seguro para seu servidor local.
+
+### Por que usar ngrok?
+
+- Cria um endpoint HTTPS seguro para seu servidor de desenvolvimento local
+- Essencial para callbacks da API do Spotify, que exigem HTTPS
+- Permite testar fluxos OAuth localmente sem necessidade de deploy
+
+### Configuração do ngrok
+
+1. **Instale o ngrok**
+   Baixe em [ngrok.com](https://ngrok.com/download) ou instale usando npm:
+   ```bash
+   npm install ngrok -g
+   ```
+
+2. **Inicie seu servidor backend**
+   ```bash
+   cd backend
+   npm start
+   ```
+
+3. **Crie um túnel com ngrok**
+   Em um novo terminal:
+   ```bash
+   ngrok http 3001
+   ```
+
+4. **Atualize seu Painel de Desenvolvedor Spotify**
+   - Copie a URL HTTPS fornecida pelo ngrok (ex: https://abc123def456.ngrok.io)
+   - Acesse seu [Painel de Desenvolvedor Spotify](https://developer.spotify.com/dashboard)
+   - Edite as configurações da sua aplicação
+   - Adicione a URL do ngrok como URI de Redirecionamento: `https://abc123def456.ngrok.io/api/auth/callback`
+   - Não se esqueça de registrar o usuário no dashboard da sua aplicação (UserManagement) na api do spotify
+
+5. **Atualize seu arquivo .env do backend**
+   ```
+   SPOTIFY_REDIRECT_URI=https://abc123def456.ngrok.io/api/auth/callback
+   ```
+
+6. **Atualize as chamadas API do seu frontend**
+   Certifique-se de que seu frontend esteja fazendo chamadas API para a URL do ngrok ao invés de localhost.
+
+### Observações Importantes
+- URLs do ngrok mudam cada vez que você reinicia o ngrok, a menos que tenha um plano pago
+- Lembre-se de atualizar tanto o Painel do Spotify quanto seus arquivos .env quando a URL mudar
+
+## Funcionalidades
+
+- Autenticação de usuário com Spotify
+- Exibição de informações do perfil do usuário
+- Navegação pelas playlists do usuário
+- Criação de novas playlists
+- Visualização dos principais artistas com opções de filtro
+- Exploração de detalhes e álbuns do artista
+
+## Testes
+
+### Testes do Backend
+```bash
+cd backend
+npm test
+```
+
+### Testes do Frontend
+```bash
+cd frontend
+npm test
+```
+
+## Scripts Disponíveis
+
+No diretório do projeto, você pode executar:
 
 ### `npm start`
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Executa o aplicativo no modo de desenvolvimento.\
+Abra [http://localhost:3000](http://localhost:3000) para visualizá-lo em seu navegador.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+A página será recarregada quando você fizer alterações.\
+Você também poderá ver quaisquer erros de lint no console.
 
 ### `npm test`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Inicia o executor de teste no modo de observação interativo.\
+Consulte a seção sobre [execução de testes](https://facebook.github.io/create-react-app/docs/running-tests) para mais informações.
 
 ### `npm run build`
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Compila o aplicativo para produção na pasta `build`.\
+Ele agrupa corretamente o React no modo de produção e otimiza a compilação para obter o melhor desempenho.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+A compilação é minificada e os nomes dos arquivos incluem os hashes.\
+Seu aplicativo está pronto para ser implantado!
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Licença
 
-### `npm run eject`
+Este projeto está licenciado sob a Licença MIT.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)

@@ -1,5 +1,4 @@
-
-// require('dotenv').config();
+require('dotenv').config();
 
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
@@ -64,6 +63,10 @@ const callback = async (req, res) => {
 const refreshToken = async (req, res) => {
   const { refresh_token } = req.body;
   
+  if (!refresh_token) {
+    return res.status(400).json({ error: 'Refresh token é obrigatório' });
+  }
+  
   try {
     const response = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
@@ -78,9 +81,21 @@ const refreshToken = async (req, res) => {
     });
     
     const data = await response.json();
-    res.json(data);
+    
+    if (response.ok) {
+      // A resposta de refresh_token do Spotify nem sempre inclui um novo refresh_token
+      res.json({
+        access_token: data.access_token,
+        expires_in: data.expires_in,
+        refresh_token: data.refresh_token || refresh_token // Use o refresh_token existente se não houver um novo
+      });
+    } else {
+      console.error('Erro ao renovar token:', data);
+      res.status(response.status).json(data);
+    }
   } catch (error) {
-    res.json({ error: error.message });
+    console.error('Erro durante renovação de token:', error);
+    res.status(500).json({ error: 'Erro interno ao renovar token' });
   }
 };
 
