@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getUserProfile, getUserPlaylists } from '../../services/spotifyService';
 import '../../styles/Dashboard.css';
 
 function Dashboard() {
@@ -8,26 +9,15 @@ function Dashboard() {
   const [playlists, setPlaylists] = useState(null);
 
   useEffect(() => {
-    // Função pra buscar os dados do usuário quando o componente carrega
     const fetchUserData = async () => {
       try {
-        // Pega o token de acesso que guardamos no login
-        const token = localStorage.getItem('access_token');
-        
-        // Busca os dados do perfil do usuário na API do Spotify
-        const userResponse = await fetch('https://api.spotify.com/v1/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const userData = await userResponse.json();
+        const [userData, playlistsData] = await Promise.all([
+          getUserProfile(),
+          getUserPlaylists(5),
+        ]);
+
         setUser(userData);
-        
-        // Busca as playlists do usuário (limitado a 5 pra não sobrecarregar)
-        const playlistsResponse = await fetch('https://api.spotify.com/v1/me/playlists?limit=5', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const playlistsData = await playlistsResponse.json();
         setPlaylists(playlistsData);
-        
       } catch (error) {
         console.error('Error fetching user data:', error);
       } finally {
@@ -35,7 +25,6 @@ function Dashboard() {
       }
     };
 
-    // Executa a função assim que o componente montar
     fetchUserData();
   }, []);
 

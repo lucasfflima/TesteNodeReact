@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getValidToken } from '../../utils/auth';
+import { getTopArtists } from '../../services/spotifyService';
 import '../../styles/TopArtists.css';
 
 function TopArtists() {
@@ -10,6 +10,7 @@ function TopArtists() {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(null);
   
   // Quantidade de artistas por página
   const LIMIT = 20;
@@ -46,22 +47,7 @@ function TopArtists() {
   // Função para buscar artistas
   const fetchTopArtists = async (currentOffset = 0) => {
     try {
-      const token = await getValidToken();
-      
-      const response = await fetch(
-        `https://api.spotify.com/v1/me/top/artists?time_range=${timeRange}&limit=${LIMIT}&offset=${currentOffset}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar artistas: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await getTopArtists(timeRange, LIMIT, currentOffset);
       
       if (currentOffset === 0) {
         setArtists(data.items);
@@ -77,8 +63,9 @@ function TopArtists() {
       // Verifica se chegamos ao final dos resultados
       setHasMore(data.total > currentOffset + data.items.length);
       
-    } catch (error) {
-      console.error('Erro ao buscar top artistas:', error);
+    } catch (err) {
+      console.error('Erro ao buscar top artistas:', err);
+      setError('Não foi possível carregar os artistas. Tente novamente.');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -105,6 +92,10 @@ function TopArtists() {
 
   if (loading && artists.length === 0) {
     return <div className="loading">Carregando seus artistas favoritos...</div>;
+  }
+
+  if (error) {
+    return <div className="loading">{error}</div>;
   }
 
   return (

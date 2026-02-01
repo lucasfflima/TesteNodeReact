@@ -44,6 +44,16 @@ Este projeto segue uma arquitetura cliente-servidor:
    npm install
    ```
 
+   Variáveis (.env no backend):
+   | Variável | Descrição |
+   | --- | --- |
+   | SPOTIFY_CLIENT_ID | Client ID do app no Spotify |
+   | SPOTIFY_CLIENT_SECRET | Client Secret do app no Spotify |
+   | SPOTIFY_REDIRECT_URI | URI de callback (ex.: https://xxxxx.ngrok.io/api/auth/callback) |
+   | PORT | Porta do backend (padrão 3001) |
+   | FRONTEND_URL | URL do frontend (ex.: http://localhost:3000) |
+   | CORS_ORIGINS | Lista de origens permitidas, separadas por vírgula (opcional; default usa FRONTEND_URL) |
+
    Crie um arquivo `.env` no diretório backend com as seguintes variáveis:
    ```
    SPOTIFY_CLIENT_ID=seu_spotify_client_id
@@ -133,6 +143,54 @@ A API do Spotify requer HTTPS para redirecionamentos OAuth em produção. Para d
 - Visualização dos principais artistas com opções de filtro
 - Exploração de detalhes e álbuns do artista
 
+## Decisões de Arquitetura e Segurança
+
+- Backend Express com middleware de segurança (helmet), CORS com allowlist baseada em FRONTEND_URL/CORS_ORIGINS e rate limiting em `/api/auth/*`.
+- Serviço de autenticação Spotify isolado em `src/services/spotifyAuthService.js`, controllers finos e middleware de erro central em `src/middleware/errorHandler.js`.
+- Request tracing simples via `X-Request-Id` e logs estruturados (console) para correlação.
+- Validação de entrada com Zod em `/api/auth/refresh-token` (ver `src/middleware/validate.js`).
+- Frontend usa axios client centralizado (`src/services/apiClient.js`) com interceptor de refresh automático; chamadas ao Spotify ficam em `src/services/spotifyService.js`.
+- Tokens ainda são guardados em localStorage para compatibilidade; para produção, preferir cookies httpOnly/secure emitidos pelo backend.
+
+## Docker (opcional)
+
+`docker-compose.yml` (exemplo rápido):
+
+```yaml
+version: '3.9'
+services:
+   backend:
+      build: ./backend
+      ports:
+         - "3001:3001"
+      env_file: backend/.env
+   frontend:
+      build: ./frontend
+      ports:
+         - "3000:3000"
+      environment:
+         - PORT=3000
+         - REACT_APP_API_URL=http://localhost:3001
+```
+
+## Troubleshooting
+
+- `invalid_grant` no callback: confirme SPOTIFY_REDIRECT_URI idêntica no Spotify Dashboard e no `.env`; reinicie ngrok atualizando URL.
+- 401 recorrente no frontend: o interceptor tenta `refresh-token`; se falhar, faz logout. Verifique se o refresh token é válido e se o backend está acessível.
+- CORS bloqueado: ajuste `CORS_ORIGINS` para incluir a origem do navegador (ex.: `http://localhost:3000,http://127.0.0.1:3000`).
+- Falha de build por SSL/OAuth em dev: use ngrok para HTTPS ou configure um túnel similar.
+
+## Scripts úteis
+
+- Backend: `npm test` (Jest), `npm start`.
+- Frontend: `npm start`, `npm test -- --watch=false --passWithNoTests`.
+
+## Próximos passos recomendados
+
+- Migrar tokens para cookies httpOnly/secure (SameSite=Lax) e mover o refresh para o backend.
+- Adicionar logs estruturados (pino) e tracing por request-id no backend.
+- Introduzir React Query ou SWR para cache/dedupe de chamadas no frontend e loaders do React Router.
+
 ## Testes
 
 ### Testes do Backend
@@ -144,7 +202,7 @@ npm test
 ### Testes do Frontend
 ```bash
 cd frontend
-npm test
+npm test -- --watch=false --passWithNoTests  # não há testes escritos atualmente
 ```
 
 ## Scripts Disponíveis

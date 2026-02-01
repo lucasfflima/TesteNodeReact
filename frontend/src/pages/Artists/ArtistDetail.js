@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getValidToken } from '../../utils/auth';
+import { getArtist, getArtistAlbums } from '../../services/spotifyService';
 import '../../styles/ArtistDetail.css';
 
 function ArtistDetail() {
@@ -35,63 +35,11 @@ function ArtistDetail() {
 
     const fetchArtistAndAlbums = async () => {
       try {
-        // Obtenha um token válido
-        const token = await getValidToken().catch(err => {
-          console.error("Erro ao obter token válido:", err);
-          navigate('/login');
-          return null;
-        });
+        const [artistData, albumsData] = await Promise.all([
+          getArtist(artistId),
+          getArtistAlbums(artistId, 50),
+        ]);
         
-        if (!token) {
-          setError("Token não encontrado. Redirecionando para login...");
-          setTimeout(() => navigate('/login'), 2000);
-          return;
-        }
-        
-        // Buscar detalhes do artista
-        const artistResponse = await fetch(
-          `https://api.spotify.com/v1/artists/${artistId}`,
-          {
-            headers: { 'Authorization': `Bearer ${token}` }
-          }
-        );
-        
-        if (!artistResponse.ok) {
-          const errorData = await artistResponse.json();
-          console.error("Erro da API:", errorData);
-          
-          if (artistResponse.status === 401) {
-            throw new Error("Sessão expirada. Faça login novamente.");
-          } else if (artistResponse.status === 400) {
-            throw new Error(`ID de artista inválido: ${artistId}`);
-          }
-          throw new Error(`Erro ao buscar artista: ${artistResponse.status}`);
-        }
-        
-        const artistData = await artistResponse.json();
-        setArtist(artistData);
-        
-        // Buscar álbuns do artista
-        const albumsResponse = await fetch(
-          `https://api.spotify.com/v1/artists/${artistId}/albums?include_groups=album&limit=50`,
-          {
-            headers: { 'Authorization': `Bearer ${token}` }
-          }
-        );
-        
-        if (!albumsResponse.ok) {
-          const errorAlbums = await albumsResponse.json();
-          console.error("Erro ao buscar álbums:", errorAlbums);
-          
-          if (albumsResponse.status === 401) {
-            throw new Error("Sessão expirada. Faça login novamente.");
-          } else if (albumsResponse.status === 400) {
-            throw new Error(`ID de artista inválido para busca de álbums: ${artistId}`);
-          }
-          throw new Error(`Erro ao buscar álbuns: ${albumsResponse.status}`);
-        }
-        
-        const albumsData = await albumsResponse.json();
         
         // Remover duplicados
         const uniqueAlbums = [];
