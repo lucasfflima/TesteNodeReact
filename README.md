@@ -34,7 +34,7 @@ Este projeto segue uma arquitetura cliente-servidor:
 
 1. **Clone o repositório**
    ```bash
-   git clone <url-do-repositorio>
+   git clone git@github.com:lucasfflima/TesteNodeReact.git
    cd teste-node-react
    ```
 
